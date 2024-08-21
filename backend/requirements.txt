@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+sqlalchemy
+pandas
+numpy
+tensorflow
+celery
+psycopg2-binary
+alembic
+nltk
+textblob
+newsapi-python
+tweepy
+pandas
+numpy
+ta
