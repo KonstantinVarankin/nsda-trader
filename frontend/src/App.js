@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Switch, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Dashboard from './components/Dashboard';
 import Login from './components/Login';
 import Monitoring from './components/Monitoring';
-import Notifications from './components/Notifications';
+import AITrading from './components/AITrading';
 import OpenOrders from './components/OpenOrders';
 import PerformanceMetrics from './components/PerformanceMetrics';
 import Settings from './components/Settings';
@@ -23,6 +23,7 @@ function App() {
                 <li><Link to="/dashboard">Dashboard</Link></li>
                 <li><Link to="/monitoring">Monitoring</Link></li>
                 <li><Link to="/trading">Trading</Link></li>
+                <li><Link to="/ai-trading">AI Trading</Link></li>
                 <li><Link to="/performance">Performance</Link></li>
                 <li><Link to="/settings">Settings</Link></li>
               </ul>
@@ -31,6 +32,7 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/monitoring" element={<Monitoring />} />
               <Route path="/trading" element={<TradingForm />} />
+              <Route path="/ai-trading" element={<AITrading />} />
               <Route path="/performance" element={<PerformanceMetrics />} />
               <Route path="/settings" element={<Settings />} />
             </Routes>
