@@ -12,14 +12,14 @@ class Trade(BaseModel):
     amount: float
     price: float
 
-# В реальном приложении эти данные должны храниться в базе данных
+# пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
 trade_history: List[Trade] = []
 
 @router.get("/trades", response_model=List[Trade])
 async def get_trades():
     return trade_history
 
-# Функция для добавления новой сделки в историю
+# пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 def add_trade(pair: str, action: str, amount: float, price: float):
     trade = Trade(
         timestamp=datetime.datetime.now(),
@@ -29,5 +29,5 @@ def add_trade(pair: str, action: str, amount: float, price: float):
         price=price
     )
     trade_history.append(trade)
-    if len(trade_history) > 100:  # Ограничиваем историю последними 100 сделками
+    if len(trade_history) > 100:  # пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ 100 пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         trade_history.pop(0)

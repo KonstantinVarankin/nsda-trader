@@ -11,15 +11,7 @@ logger = logging.getLogger(__name__)
 
 import numpy as np
 
-import numpy as np
-
 class TradingService:
-    def __init__(self):
-        self.is_running = False
-        self.price_cache: Dict[str, list] = {}
-        self.ma_short_cache: Dict[str, float] = {}
-        self.ma_long_cache: Dict[str, float] = {}
-        self.rsi_cache: Dict[str, float] = {}
     def __init__(self):
         self.is_running = False
         self.price_cache: Dict[str, list] = {}
@@ -113,30 +105,12 @@ class TradingService:
                 return False
             return self.rsi_cache[pair] < settings.rsiBuyThreshold
         return False
-        if settings.strategy == 'MA_CROSSOVER':
-            if pair not in self.ma_short_cache or pair not in self.ma_long_cache:
-                return False
-            return self.ma_short_cache[pair] > self.ma_long_cache[pair]
-        elif settings.strategy == 'RSI':
-            if pair not in self.rsi_cache:
-                return False
-            return self.rsi_cache[pair] < settings.rsiBuyThreshold
-        return False
         ma = self.calculate_moving_average(pair)
         if ma == 0:
             return False
         return current_price > ma * 1.02  # Покупаем, если цена на 2% выше MA
 
     def should_sell(self, pair: str, current_price: float, settings) -> bool:
-        if settings.strategy == 'MA_CROSSOVER':
-            if pair not in self.ma_short_cache or pair not in self.ma_long_cache:
-                return False
-            return self.ma_short_cache[pair] < self.ma_long_cache[pair]
-        elif settings.strategy == 'RSI':
-            if pair not in self.rsi_cache:
-                return False
-            return self.rsi_cache[pair] > settings.rsiSellThreshold
-        return False
         if settings.strategy == 'MA_CROSSOVER':
             if pair not in self.ma_short_cache or pair not in self.ma_long_cache:
                 return False
@@ -168,6 +142,5 @@ class TradingService:
         add_trade(pair, action, amount, price)
 
 trading_service = TradingService()
-
 
 
