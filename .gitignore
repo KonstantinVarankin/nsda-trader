@@ -1,0 +1,29 @@
+# Python cache files
+__pycache__/
+*.pyc
+
+# Virtual environment
+.venv/
+
+# Alembic migration files (если вы не хотите их отслеживать)
+alembic/versions/
+
+# IDE specific files
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Database files
+*.db
+
+# Environment variables
+.env
+
+# Dependency directories
+node_modules/
+
+# Build directories
+build/
+dist/
