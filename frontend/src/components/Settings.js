@@ -8,7 +8,7 @@ import {
   Grid, 
   Switch, 
   FormControlLabel 
-} from '@material-ui/core';
+} from '@mui/material';
 import axios from 'axios';
 
 const Settings = () => {
@@ -687,5 +687,6 @@ const [errors, setErrors] = useState({
 };
 
 export default Settings;
+
 
 

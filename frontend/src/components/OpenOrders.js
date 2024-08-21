@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button } from '@material-ui/core';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button } from '@mui/material';
 import axios from 'axios';
 
 const OpenOrders = () => {
@@ -20,7 +20,7 @@ const OpenOrders = () => {
 
   const handleCancelOrder = async (symbol, orderId) => {
     try {
-      await axios.delete(/api/v1/trading/cancel-order//);
+      await axios.delete(`/api/v1/trading/cancel-order/${orderId}`);
       fetchOpenOrders(); // Refresh the list after cancelling an order
     } catch (error) {
       console.error('Error cancelling order:', error);
@@ -66,3 +66,5 @@ const OpenOrders = () => {
 };
 
 export default OpenOrders;
+
+

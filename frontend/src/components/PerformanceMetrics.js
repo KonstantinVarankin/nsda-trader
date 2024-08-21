@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, Typography, Grid } from '@material-ui/core';
+import { Card, CardContent, Typography, Grid } from '@mui/material';
 import axios from 'axios';
 
 const PerformanceMetrics = () => {
@@ -60,3 +60,4 @@ const PerformanceMetrics = () => {
 };
 
 export default PerformanceMetrics;
+

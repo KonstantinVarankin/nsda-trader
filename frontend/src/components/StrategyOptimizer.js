@@ -18,7 +18,7 @@ const StrategyOptimizer = () => {
   const fetchStrategies = async () => {
     try {
       const response = await axios.get('/strategies', {
-        headers: { Authorization: Bearer  }
+        headers: { Authorization: 'Bearer'  }
       });
       setStrategies(response.data);
     } catch (error) {
@@ -40,7 +40,7 @@ const StrategyOptimizer = () => {
         strategy_name: selectedStrategy,
         param_grid: paramGrid
       }, {
-        headers: { Authorization: Bearer  }
+        headers: { Authorization: 'Bearer'  }
       });
       setOptimizationResult(response.data);
     } catch (error) {
@@ -56,7 +56,7 @@ const StrategyOptimizer = () => {
         start_date: '2020-01-01',
         end_date: '2021-12-31'
       }, {
-        headers: { Authorization: Bearer  }
+        headers: { Authorization: 'Bearer'  }
       });
       setBacktestResult(response.data);
       renderBacktestChart(response.data.returns);
@@ -130,3 +130,4 @@ const StrategyOptimizer = () => {
 };
 
 export default StrategyOptimizer;
+

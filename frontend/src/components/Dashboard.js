@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PerformanceMetrics from './PerformanceMetrics';
-import PerformanceMetrics from './PerformanceMetrics';
-import { Grid, Paper, Typography, Card, CardContent } from '@material-ui/core';
+import { Grid, Paper, Typography, Card, CardContent } from '@mui/material';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell } from 'recharts';
 import axios from 'axios';
 
@@ -121,7 +120,7 @@ const Dashboard = () => {
                 dataKey="value"
               >
                 {assetAllocation.map((entry, index) => (
-                  <Cell key={cell-} fill={COLORS[index % COLORS.length]} />
+                  "<Cell 'key={`cell-\${index}`}', 'fill={COLORS\[index % COLORS.length\]}' />", "<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />"
                 ))}
               </Pie>
               <Tooltip />
@@ -135,5 +134,9 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
+
+
+
 
 

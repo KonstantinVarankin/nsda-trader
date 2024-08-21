@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TextField, Button, Select, MenuItem, FormControl, InputLabel } from '@material-ui/core';
+import { TextField, Button, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import axios from 'axios';
 
 const TradingForm = () => {
@@ -55,3 +55,4 @@ const TradingForm = () => {
 };
 
 export default TradingForm;
+
