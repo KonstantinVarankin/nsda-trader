@@ -9,6 +9,11 @@ import PerformanceMetrics from './components/PerformanceMetrics';
 import Settings from './components/Settings';
 import StrategyOptimizer from './components/StrategyOptimizer';
 import TradingForm from './components/TradingForm';
+import MarketSentiment from './components/MarketSentiment';
+import NeuralNetworkVisualization from './components/NeuralNetworkVisualization';
+import Notifications from './components/Notifications';
+import PredictionAnalysis from './components/PredictionAnalysis';
+import TradingHistory from './components/TradingHistory';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -25,6 +30,13 @@ function App() {
                 <li><Link to="/trading">Trading</Link></li>
                 <li><Link to="/ai-trading">AI Trading</Link></li>
                 <li><Link to="/performance">Performance</Link></li>
+                <li><Link to="/market-sentiment">Market Sentiment</Link></li>
+                <li><Link to="/strategy-optimizer">Strategy Optimizer</Link></li>
+                <li><Link to="/neural-network">Neural Network</Link></li>
+                <li><Link to="/prediction-analysis">Prediction Analysis</Link></li>
+                <li><Link to="/trading-history">Trading History</Link></li>
+                <li><Link to="/open-orders">Open Orders</Link></li>
+                <li><Link to="/notifications">Notifications</Link></li>
                 <li><Link to="/settings">Settings</Link></li>
               </ul>
             </nav>
@@ -34,6 +46,13 @@ function App() {
               <Route path="/trading" element={<TradingForm />} />
               <Route path="/ai-trading" element={<AITrading />} />
               <Route path="/performance" element={<PerformanceMetrics />} />
+              <Route path="/market-sentiment" element={<MarketSentiment />} />
+              <Route path="/strategy-optimizer" element={<StrategyOptimizer />} />
+              <Route path="/neural-network" element={<NeuralNetworkVisualization />} />
+              <Route path="/prediction-analysis" element={<PredictionAnalysis />} />
+              <Route path="/trading-history" element={<TradingHistory />} />
+              <Route path="/open-orders" element={<OpenOrders />} />
+              <Route path="/notifications" element={<Notifications />} />
               <Route path="/settings" element={<Settings />} />
             </Routes>
           </>

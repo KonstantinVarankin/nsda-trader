@@ -1,11 +1,12 @@
 import asyncio
 import logging
 from app.api.api_v1.endpoints.settings import get_settings
-from app.services.notification_service import send_trade_notification, send_warning_notification\nfrom app.api.api_v1.endpoints.trades import add_trade
+from app.services.notification_service import send_trade_notification, send_warning_notification
+from app.api.api_v1.endpoints.trades import add_trade
 from typing import Dict
-import random  # Для симуляции цен, в реальном приложении используйте API биржи
+import random  # пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ, пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ API пїЅпїЅпїЅпїЅпїЅ
 
-# Настройка логирования
+# пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -28,13 +29,13 @@ class TradingService:
         while self.is_running:
             settings = await get_settings()
             if not settings.tradingEnabled:
-                await asyncio.sleep(60)  # Проверяем каждую минуту, включена ли торговля
+                await asyncio.sleep(60)  # пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                 continue
 
             for pair in settings.tradingPairs.split(','):
                 await self.check_and_execute_trade(pair, settings)
 
-            await asyncio.sleep(60)  # Ждем минуту перед следующей итерацией
+            await asyncio.sleep(60)  # пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 
     async def check_and_execute_trade(self, pair: str, settings):
         current_price = await self.get_current_price(pair)
@@ -52,8 +53,8 @@ class TradingService:
             logger.info(f"Sell signal for {pair} at {current_price}")
 
     async def get_current_price(self, pair: str) -> float:
-        # В реальном приложении здесь будет запрос к API биржи
-        # Для примера используем случайные колебания цены
+        # пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ API пїЅпїЅпїЅпїЅпїЅ
+        # пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
         if pair not in self.price_cache:
             self.price_cache[pair] = random.uniform(1000, 50000)
         else:
@@ -87,7 +88,7 @@ class TradingService:
         if pair not in self.moving_averages:
             self.moving_averages[pair] = []
         self.moving_averages[pair].append(price)
-        if len(self.moving_averages[pair]) > 20:  # 20-периодная скользящая средняя
+        if len(self.moving_averages[pair]) > 20:  # 20-пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             self.moving_averages[pair].pop(0)
 
     def calculate_moving_average(self, pair: str) -> float:
@@ -108,7 +109,7 @@ class TradingService:
         ma = self.calculate_moving_average(pair)
         if ma == 0:
             return False
-        return current_price > ma * 1.02  # Покупаем, если цена на 2% выше MA
+        return current_price > ma * 1.02  # пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅ 2% пїЅпїЅпїЅпїЅ MA
 
     def should_sell(self, pair: str, current_price: float, settings) -> bool:
         if settings.strategy == 'MA_CROSSOVER':
@@ -123,7 +124,7 @@ class TradingService:
         ma = self.calculate_moving_average(pair)
         if ma == 0:
             return False
-        return current_price < ma * 0.98  # Продаем, если цена на 2% ниже MA
+        return current_price < ma * 0.98  # пїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅ 2% пїЅпїЅпїЅпїЅ MA
 
     def calculate_position_size(self, risk_level: str) -> float:
         if risk_level == 'low':
@@ -134,9 +135,9 @@ class TradingService:
             return 1000
 
     async def execute_trade(self, pair: str, action: str, amount: float, price: float):
-        # В реальном приложении здесь будет выполнение ордера на бирже
+        # пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
         logger.info(f"Executing {action} trade for {amount} of {pair} at {price}")
-        # Симуляция задержки выполнения ордера
+        # пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
         await asyncio.sleep(1)
         logger.info(f"Trade executed: {action} {amount} {pair} at {price}")
         add_trade(pair, action, amount, price)
