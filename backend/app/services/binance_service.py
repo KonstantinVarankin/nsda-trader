@@ -1,43 +1,47 @@
-from binance.client import Client
-from binance.exceptions import BinanceAPIException
+from binance import AsyncClient
 import pandas as pd
 from datetime import datetime
-from app.services.cache_service import cache_service
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 class BinanceService:
     def __init__(self):
-        api_key = os.getenv('BINANCE_API_KEY')
-        api_secret = os.getenv('BINANCE_API_SECRET')
-        self.client = Client(api_key, api_secret)
+        self.api_key = os.getenv('BINANCE_API_KEY')
+        self.api_secret = os.getenv('BINANCE_API_SECRET')
+        self.client = None
 
-    async def get_historical_data(self, symbol: str, interval: str, start_date: str, end_date: str) -> pd.DataFrame:
-        if cache_service.is_cache_valid(symbol, interval, start_date, end_date):
-            cached_data = cache_service.get_cached_data(symbol, interval, start_date, end_date)
-            if cached_data is not None:
-                return cached_data
+    async def initialize(self):
+        self.client = await AsyncClient.create(self.api_key, self.api_secret)
+        logger.info("BinanceService инициализирован")
+
+    async def get_historical_data(self, symbol: str, interval: str, start_date: str, end_date: str):
+        if not self.client:
+            raise ValueError("BinanceService не инициализирован. Вызовите initialize() перед использованием.")
 
         try:
-            klines = self.client.get_historical_klines(symbol, interval, start_date, end_date)
-            df = pd.DataFrame(klines, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'])
-            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-            df.set_index('timestamp', inplace=True)
-            df = df[['open', 'high', 'low', 'close', 'volume']]
-            df = df.astype(float)
-
-            cache_service.cache_data(symbol, interval, start_date, end_date, df)
-            return df
-        try:
-            klines = self.client.get_historical_klines(symbol, interval, start_date, end_date)
-            df = pd.DataFrame(klines, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'])
+            klines = await self.client.get_historical_klines(symbol, interval, start_date, end_date)
+            df = pd.DataFrame(klines, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time',
+                                               'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume',
+                                               'taker_buy_quote_asset_volume', 'ignore'])
             df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
             df.set_index('timestamp', inplace=True)
             df = df[['open', 'high', 'low', 'close', 'volume']]
             df = df.astype(float)
             return df
-        except BinanceAPIException as e:
-            print(f"An error occurred: {e}")
-            return None
+        except Exception as e:
+            logger.error(f"Error fetching historical data for {symbol}: {e}")
+            return pd.DataFrame()
+
+    async def get_exchange_info(self):
+        if not self.client:
+            raise ValueError("BinanceService не инициализирован. Вызовите initialize() перед использованием.")
+        return await self.client.get_exchange_info()
+
+    async def close(self):
+        if self.client:
+            await self.client.close_connection()
+            logger.info("BinanceService соединение закрыто")
 
 binance_service = BinanceService()
-

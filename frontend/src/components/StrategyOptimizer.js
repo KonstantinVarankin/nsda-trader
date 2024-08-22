@@ -1,128 +1,86 @@
-import React, { useState, useEffect } from 'react';
-import { Line } from 'react-chartjs-2';
+import React, { useState } from 'react';
 import axios from 'axios';
 
 const StrategyOptimizer = () => {
-  const [strategies, setStrategies] = useState([]);
-  const [selectedStrategy, setSelectedStrategy] = useState('');
-  const [paramGrid, setParamGrid] = useState({});
-  const [optimizationResult, setOptimizationResult] = useState(null);
-  const [backtestResult, setBacktestResult] = useState(null);
-  const [token, setToken] = useState('');
+  const [optimizationParams, setOptimizationParams] = useState({
+    timeframe: '1h',
+    symbol: 'BTCUSDT',
+    startDate: '',
+    endDate: '',
+    populationSize: 50,
+    generations: 100,
+  });
+  const [optimizationResults, setOptimizationResults] = useState(null);
+  const [isOptimizing, setIsOptimizing] = useState(false);
 
-  useEffect(() => {
-    // Загрузка списка стратегий при монтировании компонента
-    fetchStrategies();
-  }, []);
+  const handleInputChange = (e) => {
+    setOptimizationParams({
+      ...optimizationParams,
+      [e.target.name]: e.target.value,
+    });
+  };
 
-  const fetchStrategies = async () => {
+  const handleOptimize = async (e) => {
+    e.preventDefault();
+    setIsOptimizing(true);
     try {
-      const response = await axios.get('/strategies', {
-        headers: { Authorization: 'Bearer'  }
-      });
-      setStrategies(response.data);
-    } catch (error) {
-      console.error('Error fetching strategies:', error);
-    }
-  };
-
-  const handleStrategyChange = (e) => {
-    setSelectedStrategy(e.target.value);
-  };
-
-  const handleParamGridChange = (e) => {
-    setParamGrid(JSON.parse(e.target.value));
-  };
-
-  const handleOptimize = async () => {
-    try {
-      const response = await axios.post('/optimize', {
-        strategy_name: selectedStrategy,
-        param_grid: paramGrid
-      }, {
-        headers: { Authorization: 'Bearer'  }
-      });
-      setOptimizationResult(response.data);
+      const response = await axios.post('/api/optimize-strategy', optimizationParams);
+      setOptimizationResults(response.data);
     } catch (error) {
       console.error('Error optimizing strategy:', error);
     }
-  };
-
-  const handleBacktest = async () => {
-    try {
-      const response = await axios.post('/backtest', {
-        strategy_name: selectedStrategy,
-        params: optimizationResult.best_params,
-        start_date: '2020-01-01',
-        end_date: '2021-12-31'
-      }, {
-        headers: { Authorization: 'Bearer'  }
-      });
-      setBacktestResult(response.data);
-      renderBacktestChart(response.data.returns);
-    } catch (error) {
-      console.error('Error running backtest:', error);
-    }
-  };
-
-  const renderBacktestChart = (returns) => {
-    const chartData = {
-      labels: Array.from({length: returns.length}, (_, i) => i + 1),
-      datasets: [
-        {
-          label: 'Strategy Returns',
-          data: returns,
-          borderColor: 'rgb(75, 192, 192)',
-          tension: 0.1
-        }
-      ]
-    };
-
-    const options = {
-      responsive: true,
-      plugins: {
-        title: {
-          display: true,
-          text: 'Backtest Results'
-        },
-      },
-      scales: {
-        y: {
-          beginAtZero: true
-        }
-      }
-    };
-
-    return <Line data={chartData} options={options} />;
+    setIsOptimizing(false);
   };
 
   return (
     <div>
       <h2>Strategy Optimizer</h2>
-      <select value={selectedStrategy} onChange={handleStrategyChange}>
-        <option value="">Select a strategy</option>
-        {strategies.map(strategy => (
-          <option key={strategy} value={strategy}>{strategy}</option>
-        ))}
-      </select>
-      <textarea
-        placeholder="Enter param grid (JSON format)"
-        onChange={handleParamGridChange}
-      />
-      <button onClick={handleOptimize}>Optimize</button>
-      {optimizationResult && (
+      <form onSubmit={handleOptimize}>
         <div>
-          <h3>Optimization Result</h3>
-          <p>Best Sharpe Ratio: {optimizationResult.sharpe_ratio}</p>
-          <p>Best Parameters: {JSON.stringify(optimizationResult.best_params)}</p>
-          <button onClick={handleBacktest}>Run Backtest</button>
+          <label htmlFor="timeframe">Timeframe:</label>
+          <select name="timeframe" value={optimizationParams.timeframe} onChange={handleInputChange}>
+            <option value="1m">1 minute</option>
+            <option value="5m">5 minutes</option>
+            <option value="15m">15 minutes</option>
+            <option value="1h">1 hour</option>
+            <option value="4h">4 hours</option>
+            <option value="1d">1 day</option>
+          </select>
         </div>
-      )}
-      {backtestResult && (
         <div>
-          <h3>Backtest Result</h3>
-          <p>Sharpe Ratio: {backtestResult.sharpe_ratio}</p>
-          {renderBacktestChart(backtestResult.returns)}
+          <label htmlFor="symbol">Symbol:</label>
+          <input type="text" name="symbol" value={optimizationParams.symbol} onChange={handleInputChange} />
+        </div>
+        <div>
+          <label htmlFor="startDate">Start Date:</label>
+          <input type="date" name="startDate" value={optimizationParams.startDate} onChange={handleInputChange} />
+        </div>
+        <div>
+          <label htmlFor="endDate">End Date:</label>
+          <input type="date" name="endDate" value={optimizationParams.endDate} onChange={handleInputChange} />
+        </div>
+        <div>
+          <label htmlFor="populationSize">Population Size:</label>
+          <input type="number" name="populationSize" value={optimizationParams.populationSize} onChange={handleInputChange} />
+        </div>
+        <div>
+          <label htmlFor="generations">Generations:</label>
+          <input type="number" name="generations" value={optimizationParams.generations} onChange={handleInputChange} />
+        </div>
+        <button type="submit" disabled={isOptimizing}>
+          {isOptimizing ? 'Optimizing...' : 'Optimize Strategy'}
+        </button>
+      </form>
+      {optimizationResults && (
+        <div>
+          <h3>Optimization Results</h3>
+          <p>Best Fitness: {optimizationResults.bestFitness}</p>
+          <p>Best Parameters:</p>
+          <ul>
+            {Object.entries(optimizationResults.bestParameters).map(([key, value]) => (
+              <li key={key}>{key}: {value}</li>
+            ))}
+          </ul>
         </div>
       )}
     </div>
@@ -130,4 +88,3 @@ const StrategyOptimizer = () => {
 };
 
 export default StrategyOptimizer;
-

@@ -1,15 +1,17 @@
-from sqlalchemy import Column, Integer, Float, DateTime, String, ForeignKey
-from sqlalchemy.orm import relationship
-from app.db.base import Base
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from app.db.session import get_db
+from app.services.data_collection import get_market_data
+from app.ml.model import predict
 
-class Prediction(Base):
-    __tablename__ = "predictions"
+router = APIRouter()
 
-    id = Column(Integer, primary_key=True, index=True)
-    symbol = Column(String, index=True)
-    timestamp = Column(DateTime, index=True)
-    predicted_price = Column(Float)
-    confidence = Column(Float)
-    market_data_id = Column(Integer, ForeignKey("market_data.id"))
-    
-    market_data = relationship("MarketData")
+
+@router.get("/predict")
+def get_prediction(db: Session = Depends(get_db)):
+    market_data = get_market_data()
+    if market_data is None:
+        return {"error": "Failed to retrieve market data"}
+
+    prediction = predict(market_data)
+    return {"prediction": prediction}

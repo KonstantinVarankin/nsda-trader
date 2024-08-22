@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
-from app.services.risk_management import risk_manager
 from pydantic import BaseModel
+from app.services.risk_management import RiskManager
 
 router = APIRouter()
 
@@ -55,3 +55,5 @@ def check_max_drawdown(symbol: str):
         return {"symbol": symbol, "is_within_limit": is_within_limit}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+risk_manager = RiskManager(initial_capital=100000)
