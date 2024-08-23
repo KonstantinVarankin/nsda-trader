@@ -1,13 +1,11 @@
 import ccxt
+from app.core.config import settings
 import pandas as pd
+from newsapi import NewsApiClient
 from datetime import datetime, timedelta
 import logging
-from sqlalchemy.orm import Session
-from app.db.session import get_db
-from app.models.market_data import MarketData
-from app.core.config import settings
-import asyncio
 
+# Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -17,19 +15,22 @@ class DataCollector:
             self.exchange = getattr(ccxt, settings.EXCHANGE_NAME)({
                 'apiKey': settings.BINANCE_API_KEY,
                 'secret': settings.BINANCE_API_SECRET,
-                'enableRateLimit': True,
-                'options': {'defaultType': 'future'}
             })
         except AttributeError as e:
             logger.error(f"Failed to initialize exchange: {e}")
             raise
 
-    def fetch_ohlcv(self, symbol, timeframe='1d', since=None, limit=100):
         try:
-            params = {}
-            if since is not None:
-                params['startTime'] = since
-            ohlcv = self.exchange.fetch_ohlcv(symbol, timeframe, params=params, limit=limit)
+            logger.info(f"Initializing NewsApiClient with key: {settings.NEWS_API_KEY[:5]}...")  # Показываем только первые 5 символов ключа
+            self.newsapi = NewsApiClient(api_key=settings.NEWS_API_KEY)
+        except Exception as e:
+            logger.error(f"Failed to initialize NewsApiClient: {e}")
+            raise
+
+    def fetch_ohlcv(self, symbol, timeframe='1d', limit=100):
+        """Fetch OHLCV data from the exchange."""
+        try:
+            ohlcv = self.exchange.fetch_ohlcv(symbol, timeframe, limit=limit)
             df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
             df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
             return df
@@ -37,83 +38,103 @@ class DataCollector:
             logger.error(f"Error fetching OHLCV data: {e}")
             return None
 
-    async def get_historical_data(self, start_date: datetime, end_date: datetime = None, symbol='BTC/USDT',
-                                  timeframe='1d') -> pd.DataFrame:
-        if end_date is None:
-            end_date = datetime.now()
-
-        since = int(start_date.timestamp() * 1000)
-        all_data = []
-
-        while since < end_date.timestamp() * 1000:
-            data = self.fetch_ohlcv(symbol, timeframe, since, 1000)
-            if data is None or len(data) == 0:
-                break
-            all_data.append(data)
-            since = int(data.iloc[-1]['timestamp'].timestamp() * 1000) + 1
-
-        if not all_data:
-            return pd.DataFrame()
-
-        result = pd.concat(all_data, ignore_index=True)
-        result = result[(result['timestamp'] >= start_date) & (result['timestamp'] <= end_date)]
-        return result
-
-    async def get_latest_data(self, symbol='BTC/USDT', timeframe='1m') -> pd.DataFrame:
+    def fetch_news(self, query, from_param, to):
+        """Fetch news articles related to the given query."""
         try:
-            data = self.fetch_ohlcv(symbol, timeframe, limit=1)
-            return data
+            news = self.newsapi.get_everything(q=query,
+                                               from_param=from_param,
+                                               to=to,
+                                               language='en',
+                                               sort_by='relevancy')
+            return news['articles']
         except Exception as e:
-            logger.error(f"Error getting latest data: {e}")
-            return pd.DataFrame()
+            logger.error(f"Error fetching news data: {e}")
+            return None
 
-async def save_market_data(db: Session, data: pd.DataFrame):
+def get_news_data(days=7):
+    """
+    Fetch news data for the last specified number of days.
+
+    :param days: Number of days to fetch news for (default is 7)
+    :return: List of news articles
+    """
     try:
-        for _, row in data.iterrows():
-            market_data = MarketData(
-                timestamp=row['timestamp'],
-                open=row['open'],
-                high=row['high'],
-                low=row['low'],
-                close=row['close'],
-                volume=row['volume']
-            )
-            db.add(market_data)
-        await db.commit()
-        logger.info(f"Saved {len(data)} market data points to the database")
-    except Exception as e:
-        logger.error(f"Error saving market data to database: {e}")
-        await db.rollback()
+        collector = DataCollector()
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
 
-async def get_market_data(symbol='BTC/USDT', timeframe='1d', limit=100):
+        from_param = start_date.strftime('%Y-%m-%d')
+        to = end_date.strftime('%Y-%m-%d')
+
+        logger.info(f"Fetching news from {from_param} to {to}")
+        crypto_news = collector.fetch_news('cryptocurrency OR bitcoin OR ethereum', from_param, to)
+
+        if crypto_news is None:
+            logger.warning("No news data retrieved")
+        else:
+            logger.info(f"Retrieved {len(crypto_news)} news articles")
+
+        return crypto_news
+    except Exception as e:
+        logger.error(f"Error in get_news_data: {e}")
+        return None
+
+def get_market_data(symbol='BTC/USDT', timeframe='1d', limit=100):
+    """
+    Fetch market data for a given symbol.
+
+    :param symbol: Trading pair symbol (default is 'BTC/USDT')
+    :param timeframe: Timeframe for the data (default is '1d' for daily)
+    :param limit: Number of candles to fetch (default is 100)
+    :return: DataFrame with OHLCV data
+    """
     try:
         collector = DataCollector()
         logger.info(f"Fetching market data for {symbol}, timeframe: {timeframe}, limit: {limit}")
-        data = collector.fetch_ohlcv(symbol, timeframe, limit=limit)
-        if data is None or data.empty:
+        data = collector.fetch_ohlcv(symbol, timeframe, limit)
+        if data is None:
             logger.warning("No market data retrieved")
         else:
             logger.info(f"Retrieved market data with shape: {data.shape}")
-            db = await anext(get_db())
-            await save_market_data(db, data)
         return data
     except Exception as e:
         logger.error(f"Error in get_market_data: {e}")
         return None
 
-__all__ = ['DataCollector', 'get_market_data']
-get_historical_data = DataCollector().get_historical_data
+def get_historical_data(symbol='BTC/USDT', timeframe='1d', limit=1000):
+    """
+    Fetch historical market data for a given symbol.
 
-if __name__ == "__main__":
-    async def main():
+    :param symbol: Trading pair symbol (default is 'BTC/USDT')
+    :param timeframe: Timeframe for the data (default is '1d' for daily)
+    :param limit: Number of candles to fetch (default is 1000)
+    :return: DataFrame with OHLCV data
+    """
+    try:
         collector = DataCollector()
-        start_date = datetime.now() - timedelta(days=30)
-        historical_data = await collector.get_historical_data(start_date)
-        latest_data = await collector.get_latest_data()
+        logger.info(f"Fetching historical data for {symbol}, timeframe: {timeframe}, limit: {limit}")
+        data = collector.fetch_ohlcv(symbol, timeframe, limit)
+        if data is None:
+            logger.warning("No historical data retrieved")
+        else:
+            logger.info(f"Retrieved historical data with shape: {data.shape}")
+        return data
+    except Exception as e:
+        logger.error(f"Error in get_historical_data: {e}")
+        return None
 
-        if historical_data is not None and not historical_data.empty:
-            print(f"Retrieved historical data with shape: {historical_data.shape}")
-        if latest_data is not None and not latest_data.empty:
-            print(f"Retrieved latest data with shape: {latest_data.shape}")
+# Список экспортируемых функций
+__all__ = ['get_news_data', 'get_market_data', 'get_historical_data']
 
-    asyncio.run(main())
+# Пример использования:
+if __name__ == "__main__":
+    news_data = get_news_data()
+    market_data = get_market_data()
+    historical_data = get_historical_data()
+
+    if news_data:
+        print(f"Retrieved {len(news_data)} news articles")
+    if market_data is not None:
+        print(f"Retrieved market data with shape: {market_data.shape}")
+    if historical_data is not None:
+        print(f"Retrieved historical data with shape: {historical_data.shape}")

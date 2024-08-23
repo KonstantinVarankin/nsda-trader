@@ -95,8 +95,3 @@ class RiskManager:
             for symbol, position in self.open_positions.items():
                 new_size = position["size"] * risk_factor
                 self.open_positions[symbol]["size"] = new_size
-
-risk_manager = RiskManager(initial_capital=100000)  # Здесь укажите начальный капитал
-
-# Экспортируем risk_manager
-__all__ = ['risk_manager']
