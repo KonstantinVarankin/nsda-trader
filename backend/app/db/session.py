@@ -1,9 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.core.config import settings
 
-# Удаляем аргумент connect_args, так как он специфичен для SQLite
-engine = create_engine(settings.DATABASE_URL)
+SQLALCHEMY_DATABASE_URL = "postgresql://postgres:2202@localhost:5432/nsda_trader"
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db():

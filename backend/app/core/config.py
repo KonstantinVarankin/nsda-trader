@@ -1,11 +1,12 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import ClassVar
+from typing import ClassVar, Dict, Any
 from dotenv import load_dotenv
 import os
 from typing import Optional
 from pydantic import Field
 
 load_dotenv()
+
 
 class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
@@ -18,11 +19,19 @@ class Settings(BaseSettings):
     NEWS_API_KEY: str = os.getenv("NEWS_API_KEY", "")
     INITIAL_CAPITAL: float = Field(1000.0, env="INITIAL_CAPITAL")
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = 'utf-8'
-        case_sensitive = True
+    # Настройки для использования GPU
+    USE_GPU: bool = Field(True, env="USE_GPU")
+
+    # PyTorch-специфичные настройки (если необходимо)
+    PYTORCH_DEVICE: str = Field("cuda" if USE_GPU else "cpu", env="PYTORCH_DEVICE")
 
     PREDICTION_INTERVAL: int = 60
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding='utf-8',
+        case_sensitive=True
+    )
+
 
 settings = Settings()

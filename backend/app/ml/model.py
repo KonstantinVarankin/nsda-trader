@@ -1,67 +1,106 @@
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras.models import Sequential, load_model
-from tensorflow.keras.layers import LSTM, Dense
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader, TensorDataset
 from datetime import datetime, timedelta
 import os
 import psycopg2
 from psycopg2 import sql
 import logging
+from app.core.config import settings
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Получаем параметры подключения из переменных окружения
-DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:2202@localhost:5432/nsda_trader')
+DATABASE_URL = settings.DATABASE_URL
+
+# Настройка CUDA
+device = torch.device("cuda" if torch.cuda.is_available() and settings.USE_GPU else "cpu")
+logger.info(f"Using device: {device}")
+
+class LSTMModel(nn.Module):
+    def __init__(self, input_size, hidden_size=100, num_layers=2, output_size=1, dropout=0.2):
+        super(LSTMModel, self).__init__()
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, dropout=dropout)
+        self.dropout = nn.Dropout(dropout)
+        self.fc = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x):
+        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+        out, _ = self.lstm(x, (h0, c0))
+        out = self.dropout(out[:, -1, :])
+        out = self.fc(out)
+        return out
 
 class PredictionModel:
-    def __init__(self):
-        self.model = None
+    def __init__(self, input_size=1, hidden_size=100, num_layers=2, output_size=1):
+        self.model = LSTMModel(input_size, hidden_size, num_layers, output_size).to(device)
         self.scaler = MinMaxScaler(feature_range=(0, 1))
 
     def prepare_data(self, data, time_steps=60):
         X, y = [], []
         for i in range(len(data) - time_steps):
-            X.append(data[i:(i + time_steps), 0])
+            X.append(data[i:(i + time_steps), :])
             y.append(data[i + time_steps, 0])
-        return np.array(X), np.array(y)
+        return torch.FloatTensor(X).to(device), torch.FloatTensor(y).to(device)
 
-    def train(self, data):
+    def train(self, data, epochs=100, batch_size=32):
         df = pd.DataFrame(data)
-        df['close'] = df['close'].astype(float)
+        df = df.astype(float)
 
-        data = df['close'].values.reshape(-1, 1)
-        data_scaled = self.scaler.fit_transform(data)
+        data_scaled = self.scaler.fit_transform(df)
 
         X, y = self.prepare_data(data_scaled)
-        X = np.reshape(X, (X.shape[0], X.shape[1], 1))
 
-        self.model = Sequential()
-        self.model.add(LSTM(units=50, return_sequences=True, input_shape=(X.shape[1], 1)))
-        self.model.add(LSTM(units=50))
-        self.model.add(Dense(1))
+        criterion = nn.MSELoss()
+        optimizer = torch.optim.Adam(self.model.parameters())
 
-        self.model.compile(optimizer='adam', loss='mean_squared_error')
-        self.model.fit(X, y, epochs=100, batch_size=32)
+        dataset = TensorDataset(X, y)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+        for epoch in range(epochs):
+            self.model.train()
+            total_loss = 0
+            for batch_X, batch_y in dataloader:
+                outputs = self.model(batch_X)
+                loss = criterion(outputs.squeeze(), batch_y)
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+                total_loss += loss.item()
+
+            avg_loss = total_loss / len(dataloader)
+            if (epoch + 1) % 10 == 0:
+                logger.info(f'Epoch [{epoch + 1}/{epochs}], Loss: {avg_loss:.4f}')
 
     def predict(self, last_60_days):
         df = pd.DataFrame(last_60_days)
-        df['close'] = df['close'].astype(float)
+        df = df.astype(float)
 
-        data = df['close'].values.reshape(-1, 1)
-        last_60_days_scaled = self.scaler.transform(data)
-        X_test = np.reshape(last_60_days_scaled, (1, last_60_days_scaled.shape[0], 1))
-        pred_price = self.model.predict(X_test)
-        pred_price = self.scaler.inverse_transform(pred_price)
+        data_scaled = self.scaler.transform(df)
+        X_test = torch.FloatTensor(data_scaled).unsqueeze(0).to(device)
+
+        self.model.eval()
+        with torch.no_grad():
+            pred_price = self.model(X_test)
+
+        pred_price = self.scaler.inverse_transform(pred_price.cpu().numpy())
         return pred_price[0][0]
 
     def evaluate(self, test_data):
         df = pd.DataFrame(test_data)
-        df['close'] = df['close'].astype(float)
+        df = df.astype(float)
 
-        actual_prices = df['close'].values
+        actual_prices = df.iloc[:, 0].values
         predicted_prices = []
 
         for i in range(len(df) - 60):
@@ -74,10 +113,13 @@ class PredictionModel:
         return {'mse': mse, 'rmse': rmse}
 
     def save(self, path):
-        self.model.save(path)
+        torch.save(self.model.state_dict(), path)
+        np.save(f"{path}_scaler.npy", self.scaler.scale_)
 
     def load(self, path):
-        self.model = load_model(path)
+        self.model.load_state_dict(torch.load(path))
+        self.model.eval()
+        self.scaler.scale_ = np.load(f"{path}_scaler.npy")
 
 class NSDATradingModel:
     def __init__(self):
@@ -105,7 +147,7 @@ class NSDATradingModel:
                 conn.close()
 
     def train(self, symbol, data):
-        self.models[symbol] = PredictionModel()
+        self.models[symbol] = PredictionModel(input_size=data.shape[1])
         self.models[symbol].train(data)
         self.save_model(symbol, f"models/{symbol}_model")
 
@@ -180,7 +222,7 @@ class NSDATradingModel:
         # Здесь должен быть код для получения данных из вашего источника данных
         # Например, использование binance_service или запрос к базе данных
         # Возвращаем пример данных
-        return pd.DataFrame({'close': np.random.rand(60)})
+        return pd.DataFrame({'close': np.random.rand(60), 'volume': np.random.rand(60)})
 
     def get_predictions(self, symbol, start_date, end_date):
         conn = None

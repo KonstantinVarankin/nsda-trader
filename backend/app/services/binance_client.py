@@ -1,5 +1,5 @@
 # app/services/binance_client.py
-
+from binance.client import AsyncClient
 from binance.client import Client
 from binance.exceptions import BinanceAPIException
 from app.core.config import settings
@@ -43,5 +43,19 @@ class BinanceClient:
         except BinanceAPIException as e:
             logger.error(f"Error getting balance for {asset}: {e}")
             return None
+
+    class BinanceService:
+        def __init__(self):
+            self.client = None
+
+        async def initialize(self):
+            if not self.client:
+                self.client = await AsyncClient.create()
+
+        async def get_klines(self, symbol, interval, limit):
+            await self.initialize()
+            return await self.client.futures_klines(symbol=symbol, interval=interval, limit=limit)
+
+
 
 binance_client = BinanceClient()

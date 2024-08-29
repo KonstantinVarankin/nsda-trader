@@ -1,6 +1,8 @@
 import pandas as pd
-from app.ml.neural_network import run_neural_network, get_prediction
+
 from app.data.market_data import get_historical_data, get_latest_data, preprocess_data
+from app.ml.neural_network import TradingNeuralNetwork, run_neural_network, get_prediction
+
 
 
 class AITrader:
@@ -54,7 +56,7 @@ class AITrader:
 
 
 # Создание и инициализация AI-трейдера
-ai_trader = AITrader()
+ai_trader = TradingNeuralNetwork()
 
 
 # Функция для использования AI-трейдера
