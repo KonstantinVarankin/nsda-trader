@@ -37,7 +37,7 @@ NEWS_API_KEY = 'c7b860cf1a954ce4bb0d4e531a4c7010'
 NEWS_API_ENDPOINT = 'https://newsapi.org/v2/everything'
 
 # Загрузка необходимых ресурсов NLTK
-nltk.download('vader_lexicon')
+nltk.download('vader_lexicon', quiet=True)
 
 class LSTMModel(nn.Module):
     def __init__(self, input_size, hidden_size=100, num_layers=2, output_size=1, dropout=0.2):
@@ -50,7 +50,6 @@ class LSTMModel(nn.Module):
 
     def forward(self, x):
         batch_size = x.size(0)
-        seq_len = x.size(1)
         h0 = torch.zeros(self.num_layers, batch_size, self.hidden_size).to(x.device)
         c0 = torch.zeros(self.num_layers, batch_size, self.hidden_size).to(x.device)
 
@@ -104,8 +103,15 @@ class NewsSentimentAnalyzer:
         if not news:
             return 0.0
 
-        sentiments = [self.analyze_sentiment(article['title'] + ' ' + article['description']) for article in news]
-        return sum(sentiments) / len(sentiments)
+        sentiments = []
+        for article in news:
+            title = article.get('title', '')
+            description = article.get('description', '')
+            if title or description:
+                text = f"{title} {description}".strip()
+                sentiments.append(self.analyze_sentiment(text))
+
+        return sum(sentiments) / len(sentiments) if sentiments else 0.0
 
 class TradingNeuralNetwork:
     def __init__(self):
@@ -352,9 +358,8 @@ class AIPredictionService:
                     for horizon in PREDICTION_HORIZONS:
                         prediction = await model.predict(input_data)
                         if prediction is not None:
-                            # Создаем фиктивный массив для обратного преобразования
-                            dummy_array = np.zeros((1, 6))  # Изменено с 5 на 6 для учета настроений
-                            dummy_array[0, 3] = prediction[0][0]  # Предполагаем, что предсказание - это цена закрытия
+                            dummy_array = np.zeros((1, 6))
+                            dummy_array[0, 3] = prediction[0][0]
                             real_prediction = self.data_preprocessor.inverse_transform(dummy_array)[0, 3]
 
                             current_time = datetime.now()
@@ -379,39 +384,39 @@ class AIPredictionService:
             logger.error(f"Error in prediction cycle: {str(e)}", exc_info=True)
             return {"status": "error", "message": str(e)}
 
-        @staticmethod
-        def convert_interval_to_timedelta(interval: str) -> timedelta:
-            value = int(interval[:-1])
-            unit = interval[-1]
-            if unit == 'm':
-                return timedelta(minutes=value)
-            elif unit == 'h':
-                return timedelta(hours=value)
-            elif unit == 'd':
-                return timedelta(days=value)
-            elif unit == 'w':
-                return timedelta(weeks=value)
-            elif unit == 'M':
-                return timedelta(days=value * 30)  # Приблизительно
-            else:
-                raise ValueError(f"Unknown interval unit: {unit}")
+    @staticmethod
+    def convert_interval_to_timedelta(interval: str) -> timedelta:
+        value = int(interval[:-1])
+        unit = interval[-1]
+        if unit == 'm':
+            return timedelta(minutes=value)
+        elif unit == 'h':
+            return timedelta(hours=value)
+        elif unit == 'd':
+            return timedelta(days=value)
+        elif unit == 'w':
+            return timedelta(weeks=value)
+        elif unit == 'M':
+            return timedelta(days=value * 30)  # Приблизительно
+        else:
+            raise ValueError(f"Unknown interval unit: {unit}")
 
-        async def cleanup(self):
-            if self.binance_client:
-                await self.binance_client.close_connection()
+    async def cleanup(self):
+        if self.binance_client:
+            await self.binance_client.close_connection()
 
-    # Создаем экземпляр AIPredictionService после определения класса
+# Создаем экземпляр AIPredictionService после определения класса
 ai_service = AIPredictionService()
 
-    # Функция для запуска сервиса
+# Функция для запуска сервиса
 async def run_ai_service():
     await ai_service.initialize_models()
     while True:
-         results = await ai_service.run_prediction_cycle()
-         logger.info(f"Prediction results: {results}")
-         await asyncio.sleep(300)  # Ждем 5 минут перед следующим циклом предсказаний
+        results = await ai_service.run_prediction_cycle()
+        logger.info(f"Prediction results: {results}")
+        await asyncio.sleep(300)  # Ждем 5 минут перед следующим циклом предсказаний
 
-    # Функция для запуска и остановки сервиса
+# Функция для запуска и остановки сервиса
 def start_ai_service():
     loop = asyncio.get_event_loop()
     try:
